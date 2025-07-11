@@ -1,0 +1,36 @@
+# .NET build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.vspscc
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio files
+.vs/
+
+# Rider IDE
+.idea/
+
+# OS generated
+Thumbs.db
+.DS_Store
+
+# Docker artifacts
+*.log
+docker-compose.override.yml
+
+# dotnet tools
+*.db
+
+# Test result logs
+TestResults/
+
+# User secrets
+secrets.json
+
+# HTTP files for tests (optional)
+*.http
