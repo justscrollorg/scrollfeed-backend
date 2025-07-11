@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\work\\projects\\articlessvc\\articlessvc\\articlessvc.csproj": {}
+    "C:\\work\\projects\\articlessvc\\articlessvc.csproj": {}
   },
   "projects": {
-    "C:\\work\\projects\\articlessvc\\articlessvc\\articlessvc.csproj": {
+    "C:\\work\\projects\\articlessvc\\articlessvc.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\work\\projects\\articlessvc\\articlessvc\\articlessvc.csproj",
+        "projectUniqueName": "C:\\work\\projects\\articlessvc\\articlessvc.csproj",
         "projectName": "articlessvc",
-        "projectPath": "C:\\work\\projects\\articlessvc\\articlessvc\\articlessvc.csproj",
+        "projectPath": "C:\\work\\projects\\articlessvc\\articlessvc.csproj",
         "packagesPath": "C:\\Users\\Anurag\\.nuget\\packages\\",
-        "outputPath": "C:\\work\\projects\\articlessvc\\articlessvc\\obj\\",
+        "outputPath": "C:\\work\\projects\\articlessvc\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
