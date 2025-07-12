@@ -60,7 +60,7 @@ public class ArticlesController : ControllerBase
             })
         };
 
-        // ✅ Log the serialized response to console
+        // Log the serialized response to console
         _logger.LogInformation("Paginated Response: {ResponseJson}", JsonSerializer.Serialize(response, new JsonSerializerOptions
         {
             WriteIndented = true
