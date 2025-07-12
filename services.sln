@@ -17,6 +17,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflow", "workflow", "{F1
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "articlessvc", "articlessvc\articlessvc.csproj", "{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_infra", "_infra", "{7C4A0CC1-503E-44B7-BD5E-6F400CBA61D1}"
+	ProjectSection(SolutionItems) = preProject
+		articlessvc-deployment.yaml = articlessvc-deployment.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace articlessvc.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("articles-api")]
 public class ArticlesController : ControllerBase
 {
     private readonly WikiService _wikiService;
