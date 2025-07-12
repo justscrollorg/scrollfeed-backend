@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "articlessvc", "articlessvc.csproj", "{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
@@ -17,34 +15,25 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflow", "workflow", "{F1
 		build-dotnet-microservices.yml = build-dotnet-microservices.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "articlessvc", "articlessvc\articlessvc.csproj", "{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Debug|x64.Build.0 = Debug|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Debug|x86.Build.0 = Debug|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Release|x64.ActiveCfg = Release|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Release|x64.Build.0 = Release|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Release|x86.ActiveCfg = Release|Any CPU
-		{F9DC7D6C-D931-4DFB-85FB-322F31C28FE0}.Release|x86.Build.0 = Release|Any CPU
+		{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F1A5B2DA-5B88-45CD-976D-16079C031893} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5AE4E984-FB7C-4688-B1F4-91FC8BFE314C}
