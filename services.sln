@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{02EA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflow", "workflow", "{F1A5B2DA-5B88-45CD-976D-16079C031893}"
 	ProjectSection(SolutionItems) = preProject
-		build-dotnet-microservices.yml = build-dotnet-microservices.yml
+		.github\workflows\build-dotnet-microservices.yml = .github\workflows\build-dotnet-microservices.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "articlessvc", "articlessvc\articlessvc.csproj", "{4A8AAF0B-2637-35D5-3B2A-D558A8107AAB}"
