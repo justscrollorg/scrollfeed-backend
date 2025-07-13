@@ -66,6 +66,9 @@ public class ArticlesController : ControllerBase
             WriteIndented = true
         }));
 
+        _logger.LogInformation("Returning {Count} articles out of total {Total}", articles.Count, total);
+
+
         return Ok(response);
     }
 

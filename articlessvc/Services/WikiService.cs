@@ -18,7 +18,7 @@ public class WikiService
     public async Task PreloadArticlesAsync(int total = 200)
     {
         var tasks = new List<Task<WikiArticle>>();
-
+        Console.WriteLine($"Preloading {total} articles...");
         for (int i = 0; i < total; i++)
         {
             tasks.Add(GetOneArticleAsync());
@@ -30,6 +30,7 @@ public class WikiService
             _cache.Clear();
             _cache.AddRange(articles.Where(a => a != null));
         }
+        Console.WriteLine($"Done. Loaded {_cache.Count} articles.");
     }
 
     private async Task<WikiArticle> GetOneArticleAsync()
