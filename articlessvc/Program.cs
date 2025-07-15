@@ -10,7 +10,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Explicit preload BEFORE app.Run()
 using (var scope = app.Services.CreateScope())
 {
     var wikiService = scope.ServiceProvider.GetRequiredService<WikiService>();
