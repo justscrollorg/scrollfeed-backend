@@ -9,7 +9,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [articlessvc]  
+        service: [articlessvc,jokessvc]  
 
     steps:
       - name: Checkout code

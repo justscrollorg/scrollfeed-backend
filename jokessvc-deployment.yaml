@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jokessvc
+  labels:
+    app: jokessvc
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jokessvc
+  template:
+    metadata:
+      labels:
+        app: jokessvc
+    spec:
+      containers:
+        - name: jokessvc
+          image: anurag2911/jokessvc:latest  
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jokessvc
+  labels:
+    app: jokessvc
+spec:
+  selector:
+    app: jokessvc
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
