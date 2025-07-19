@@ -61,21 +61,24 @@ public class WikiService
 
         try
         {
-            // Remove old articles (keep only latest batch)
+            // Remove old articles (keep only the most recent articles, making room for new batch)
             var totalCount = await _collection.CountDocumentsAsync(FilterDefinition<WikiArticle>.Empty);
-            if (totalCount > batchSize * 2) // Keep some buffer
+            var maxRetainCount = batchSize; // Keep only one batch worth of articles
+            
+            if (totalCount > maxRetainCount)
             {
-                var oldestToKeep = await _collection.Find(FilterDefinition<WikiArticle>.Empty)
+                var articlesToKeep = await _collection.Find(FilterDefinition<WikiArticle>.Empty)
                     .Sort(Builders<WikiArticle>.Sort.Descending("_createdAt"))
-                    .Limit(batchSize)
+                    .Limit(maxRetainCount)
                     .Project(x => x.Id)
                     .ToListAsync();
 
-                var keepFilter = Builders<WikiArticle>.Filter.In(x => x.Id, oldestToKeep);
+                var keepFilter = Builders<WikiArticle>.Filter.In(x => x.Id, articlesToKeep);
                 var deleteFilter = Builders<WikiArticle>.Filter.Not(keepFilter);
                 
                 var deleteResult = await _collection.DeleteManyAsync(deleteFilter);
-                _logger.LogInformation("Cleaned up {DeletedCount} old articles", deleteResult.DeletedCount);
+                _logger.LogInformation("Cleaned up {DeletedCount} old articles, keeping {KeepCount} recent articles", 
+                    deleteResult.DeletedCount, articlesToKeep.Count);
             }
 
             // Fetch new articles
