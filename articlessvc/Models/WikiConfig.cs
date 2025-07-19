@@ -4,7 +4,7 @@ public class WikiConfig
 {
     public string NatsUrl { get; set; } = "nats://localhost:4222";
     public string MongoUri { get; set; } = "mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/?replicaSet=rs0";
-    public int RefreshIntervalMinutes { get; set; } = 10;
+    public int RefreshIntervalMinutes { get; set; } = 1; // Temporarily set to 1 minute for testing
     public int BatchSize { get; set; } = 200;
     public int RateLimitDelayMs { get; set; } = 10; // ~100 requests/sec to respect Wikimedia's rate limit
     public int MaxRetries { get; set; } = 3;
