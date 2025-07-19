@@ -32,7 +32,7 @@ public class BackgroundRefreshService : BackgroundService
         await InitializeNatsAsync();
 
         // Start periodic refresh timer
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(_config.RefreshIntervalHours));
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(_config.RefreshIntervalMinutes));
 
         // Initial refresh
         await ScheduleRefreshAsync();

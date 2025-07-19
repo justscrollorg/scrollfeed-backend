@@ -160,7 +160,7 @@ public class ArticlesController : ControllerBase
             return Ok(new
             {
                 totalArticles = total,
-                refreshIntervalHours = _config.RefreshIntervalHours,
+                refreshIntervalMinutes = _config.RefreshIntervalMinutes,
                 rateLimitMs = _config.RateLimitDelayMs,
                 batchSize = _config.BatchSize,
                 timestamp = DateTime.UtcNow
