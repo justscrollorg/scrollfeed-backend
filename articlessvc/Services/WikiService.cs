@@ -1,4 +1,5 @@
 ﻿using articlessvc.Models;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using System.Text.Json;
 
@@ -8,67 +9,213 @@ public class WikiService
 {
     private readonly HttpClient _httpClient;
     private readonly IMongoCollection<WikiArticle> _collection;
+    private readonly WikiConfig _config;
+    private readonly ILogger<WikiService> _logger;
+    private readonly SemaphoreSlim _rateLimitSemaphore;
 
-    public WikiService(IConfiguration config, IHttpClientFactory clientFactory)
+    public WikiService(
+        IOptions<WikiConfig> config, 
+        IHttpClientFactory clientFactory,
+        ILogger<WikiService> logger)
     {
-        var mongoUri = Environment.GetEnvironmentVariable("MONGO_URI")
-                      ?? config.GetValue<string>("MONGO_URI")
-                      ?? "mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/?replicaSet=rs0";
+        _config = config.Value;
+        _logger = logger;
+        _rateLimitSemaphore = new SemaphoreSlim(1, 1); // Ensure sequential requests
 
+        var mongoUri = Environment.GetEnvironmentVariable("MONGO_URI") ?? _config.MongoUri;
         var client = new MongoClient(mongoUri);
         var db = client.GetDatabase("wikidb");
         _collection = db.GetCollection<WikiArticle>("articles");
 
+        // Create indexes for better performance
+        CreateIndexesAsync().ConfigureAwait(false);
+
         _httpClient = clientFactory.CreateClient();
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "articlessvc/1.0 (anurag@example.com)");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", _config.UserAgent);
+        _httpClient.Timeout = TimeSpan.FromSeconds(30);
     }
 
-    public async Task PreloadArticlesAsync(int total = 200)
-    {
-        Console.WriteLine($"Preloading {total} articles...");
-
-        await _collection.DeleteManyAsync(FilterDefinition<WikiArticle>.Empty);
-
-        for (int i = 0; i < total; i++)
-        {
-            var article = await GetOneArticleAsync();
-            if (article != null)
-            {
-                await _collection.InsertOneAsync(article);
-                await Task.Delay(10); // ~100 requests/sec to respect Wikimedia's rate limit
-            }
-        }
-
-        Console.WriteLine("Preloading done.");
-    }
-
-    private async Task<WikiArticle?> GetOneArticleAsync()
+    private async Task CreateIndexesAsync()
     {
         try
         {
-            var response = await _httpClient.GetAsync("https://en.wikipedia.org/api/rest_v1/page/random/summary");
-            if (!response.IsSuccessStatusCode) return null;
+            // Create index on title for faster searches
+            var titleIndex = Builders<WikiArticle>.IndexKeys.Ascending(x => x.Title);
+            await _collection.Indexes.CreateOneAsync(new CreateIndexModel<WikiArticle>(titleIndex));
 
-            var json = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<WikiArticle>(json);
+            // Create index on creation timestamp for cleanup operations
+            var timestampIndex = Builders<WikiArticle>.IndexKeys.Descending("_createdAt");
+            await _collection.Indexes.CreateOneAsync(new CreateIndexModel<WikiArticle>(timestampIndex));
+
+            _logger.LogInformation("MongoDB indexes created successfully");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching article: {ex.Message}");
-            return null;
+            _logger.LogWarning(ex, "Failed to create indexes (they may already exist)");
         }
+    }
+
+    public async Task RefreshArticlesAsync(int batchSize = 200)
+    {
+        _logger.LogInformation("Starting article refresh with batch size: {BatchSize}", batchSize);
+
+        try
+        {
+            // Remove old articles (keep only latest batch)
+            var totalCount = await _collection.CountDocumentsAsync(FilterDefinition<WikiArticle>.Empty);
+            if (totalCount > batchSize * 2) // Keep some buffer
+            {
+                var oldestToKeep = await _collection.Find(FilterDefinition<WikiArticle>.Empty)
+                    .Sort(Builders<WikiArticle>.Sort.Descending("_createdAt"))
+                    .Limit(batchSize)
+                    .Project(x => x.Id)
+                    .ToListAsync();
+
+                var keepFilter = Builders<WikiArticle>.Filter.In(x => x.Id, oldestToKeep);
+                var deleteFilter = Builders<WikiArticle>.Filter.Not(keepFilter);
+                
+                var deleteResult = await _collection.DeleteManyAsync(deleteFilter);
+                _logger.LogInformation("Cleaned up {DeletedCount} old articles", deleteResult.DeletedCount);
+            }
+
+            // Fetch new articles
+            var successCount = 0;
+            var failCount = 0;
+
+            for (int i = 0; i < batchSize; i++)
+            {
+                await _rateLimitSemaphore.WaitAsync();
+                try
+                {
+                    var article = await GetOneArticleWithRetryAsync();
+                    if (article != null)
+                    {
+                        await _collection.InsertOneAsync(article);
+                        successCount++;
+                        _logger.LogDebug("Fetched article: {Title}", article.Title);
+                    }
+                    else
+                    {
+                        failCount++;
+                    }
+
+                    // Rate limiting - respect Wikipedia's guidelines
+                    await Task.Delay(_config.RateLimitDelayMs);
+                }
+                finally
+                {
+                    _rateLimitSemaphore.Release();
+                }
+            }
+
+            _logger.LogInformation("Article refresh completed. Success: {SuccessCount}, Failed: {FailCount}", 
+                successCount, failCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during article refresh");
+            throw;
+        }
+    }
+
+    private async Task<WikiArticle?> GetOneArticleWithRetryAsync()
+    {
+        for (int attempt = 1; attempt <= _config.MaxRetries; attempt++)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("https://en.wikipedia.org/api/rest_v1/page/random/summary");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var article = JsonSerializer.Deserialize<WikiArticle>(json);
+                    
+                    if (article != null && !string.IsNullOrEmpty(article.Title))
+                    {
+                        return article;
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Wikipedia API returned status: {StatusCode}", response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Attempt {Attempt} failed to fetch article", attempt);
+            }
+
+            if (attempt < _config.MaxRetries)
+            {
+                await Task.Delay(_config.RetryDelayMs * attempt); // Exponential backoff
+            }
+        }
+
+        _logger.LogError("Failed to fetch article after {MaxRetries} attempts", _config.MaxRetries);
+        return null;
+    }
+
+    // Legacy method for backward compatibility
+    public async Task PreloadArticlesAsync(int total = 200)
+    {
+        _logger.LogInformation("Preloading {Total} articles...", total);
+        await RefreshArticlesAsync(total);
+        _logger.LogInformation("Preloading completed");
+    }
+
+    public async Task<List<WikiArticle>> GetArticlesAsync(int page, int pageSize)
+    {
+        var skip = (page - 1) * pageSize;
+        return await _collection.Find(FilterDefinition<WikiArticle>.Empty)
+                                .Sort(Builders<WikiArticle>.Sort.Descending("_createdAt"))
+                                .Skip(skip)
+                                .Limit(pageSize)
+                                .ToListAsync();
     }
 
     public List<WikiArticle> GetArticles(int page, int pageSize)
     {
-        return _collection.Find(_ => true)
-                          .Skip((page - 1) * pageSize)
-                          .Limit(pageSize)
-                          .ToList();
+        return GetArticlesAsync(page, pageSize).GetAwaiter().GetResult();
+    }
+
+    public async Task<long> TotalArticlesAsync()
+    {
+        return await _collection.CountDocumentsAsync(FilterDefinition<WikiArticle>.Empty);
     }
 
     public int TotalArticles()
     {
-        return (int)_collection.CountDocuments(_ => true);
+        return (int)TotalArticlesAsync().GetAwaiter().GetResult();
+    }
+
+    public async Task<List<WikiArticle>> SearchArticlesAsync(string searchTerm, int page = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return await GetArticlesAsync(page, pageSize);
+        }
+
+        var filter = Builders<WikiArticle>.Filter.Or(
+            Builders<WikiArticle>.Filter.Regex(x => x.Title, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+            Builders<WikiArticle>.Filter.Regex(x => x.Description, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i"))
+        );
+
+        var skip = (page - 1) * pageSize;
+        return await _collection.Find(filter)
+                                .Sort(Builders<WikiArticle>.Sort.Descending("_createdAt"))
+                                .Skip(skip)
+                                .Limit(pageSize)
+                                .ToListAsync();
+    }
+
+    public async Task<WikiArticle?> GetArticleByIdAsync(string id)
+    {
+        return await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+    }
+
+    public void Dispose()
+    {
+        _rateLimitSemaphore?.Dispose();
+        _httpClient?.Dispose();
     }
 }

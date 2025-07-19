@@ -12,4 +12,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0-preview
 WORKDIR /app
 COPY --from=build /app/out .
 
+EXPOSE 5000
 ENTRYPOINT ["dotnet", "articlessvc.dll"]
