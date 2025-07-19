@@ -26,7 +26,7 @@ public class BackgroundRefreshService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Starting Background Refresh Service...");
+        _logger.LogInformation("Starting Background Refresh Service with {IntervalMinutes} minute intervals...", _config.RefreshIntervalMinutes);
 
         // Initialize NATS connection
         await InitializeNatsAsync();
@@ -35,12 +35,14 @@ public class BackgroundRefreshService : BackgroundService
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(_config.RefreshIntervalMinutes));
 
         // Initial refresh
+        _logger.LogInformation("Performing initial refresh...");
         await ScheduleRefreshAsync();
 
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
+                _logger.LogInformation("Timer triggered - performing scheduled refresh...");
                 await ScheduleRefreshAsync();
             }
         }
@@ -84,9 +86,11 @@ public class BackgroundRefreshService : BackgroundService
 
     private async Task ScheduleRefreshAsync()
     {
+        _logger.LogInformation("ScheduleRefreshAsync called");
+        
         if (_natsConnection == null)
         {
-            _logger.LogWarning("NATS connection not available, performing direct refresh");
+            _logger.LogInformation("NATS connection not available, performing direct refresh");
             await HandleRefreshRequestAsync(new RefreshRequest 
             { 
                 BatchSize = _config.BatchSize,
