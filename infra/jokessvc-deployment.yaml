@@ -26,11 +26,14 @@ spec:
           valueFrom:
             secretKeyRef:
               name: mongo-secret
-              key: connectionString
+              key: MONGO_URI
         - name: JokeConfig__NatsUrl
-          value: "nats://nats.nats-system:4222"
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: NATS_URL
         - name: JokeConfig__DatabaseName
-          value: "newsdb"
+          value: "jokesdb"
         - name: JokeConfig__RefreshIntervalMinutes
           value: "60"
         livenessProbe:
