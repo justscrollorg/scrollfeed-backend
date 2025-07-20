@@ -60,8 +60,9 @@ public class BackgroundRefreshService : BackgroundService
         var natsUrls = new[]
         {
             _config.NatsUrl,
-            "nats://10.2.0.172:4222", // Direct pod IP fallback
-            "nats://localhost:4222"
+            "nats://nats.nats-system.svc.cluster.local:4222", // Full DNS name
+            "nats://nats:4222", // Short name fallback
+            "nats://localhost:4222" // Local fallback
         };
 
         foreach (var natsUrl in natsUrls)

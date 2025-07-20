@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jokes-service
+  labels:
+    app: jokes-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jokes-service
+  template:
+    metadata:
+      labels:
+        app: jokes-service
+    spec:
+      containers:
+      - name: jokes-service
+        image: anurag2911/jokes-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: MONGO_URI
+        - name: NATS_URL
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: NATS_URL
+        - name: RefreshIntervalMinutes
+          value: "60"
+        - name: BatchSize
+          value: "200"
+        - name: RateLimitDelayMs
+          value: "100"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jokes-service
+  labels:
+    app: jokes-service
+spec:
+  selector:
+    app: jokes-service
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

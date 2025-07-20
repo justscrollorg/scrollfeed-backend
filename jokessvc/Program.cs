@@ -7,13 +7,20 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure JokeConfig
 builder.Services.Configure<JokeConfig>(options =>
 {
-    options.MongoUri = Environment.GetEnvironmentVariable("MONGO_URI") 
+    var mongoUri = Environment.GetEnvironmentVariable("MONGO_URI") 
         ?? builder.Configuration.GetValue<string>("MONGO_URI") 
-        ?? "mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/?replicaSet=rs0";
+        ?? "mongodb://novell:novell123@mongodb.mongo.svc.cluster.local:27017/jokedb?authSource=admin";
+    
+    // Replace the database name in the connection string to use jokedb instead of newsdb
+    if (mongoUri.Contains("/newsdb"))
+    {
+        mongoUri = mongoUri.Replace("/newsdb", "/jokedb");
+    }
+    options.MongoUri = mongoUri;
     
     options.NatsUrl = Environment.GetEnvironmentVariable("NATS_URL") 
         ?? builder.Configuration.GetValue<string>("NATS_URL") 
-        ?? "nats://nats:4222";
+        ?? "nats://nats.nats-system.svc.cluster.local:4222";
         
     options.RefreshIntervalMinutes = builder.Configuration.GetValue<int?>("RefreshIntervalMinutes") ?? 60;
     options.BatchSize = builder.Configuration.GetValue<int?>("BatchSize") ?? 200;
@@ -52,5 +59,24 @@ app.MapGet("/health", () => Results.Ok(new {
     status = "healthy", 
     timestamp = DateTime.UtcNow 
 }));
+
+// Add readiness check that includes database connectivity
+app.MapGet("/ready", async (JokeService jokeService) => 
+{
+    try
+    {
+        // Try to get total count to verify database connectivity
+        var total = await jokeService.TotalJokesAsync();
+        return Results.Ok(new { 
+            status = "ready", 
+            totalJokes = total,
+            timestamp = DateTime.UtcNow 
+        });
+    }
+    catch
+    {
+        return Results.Problem("Service not ready");
+    }
+});
 
 app.Run();
