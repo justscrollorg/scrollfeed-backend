@@ -33,6 +33,11 @@ public class ArticlesController : ControllerBase
     {
         try
         {
+            // Add cache-busting headers to prevent frontend caching
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+            
             if (page < 1 || pageSize < 1 || pageSize > 100)
             {
                 return BadRequest("Invalid page or pageSize parameters");
