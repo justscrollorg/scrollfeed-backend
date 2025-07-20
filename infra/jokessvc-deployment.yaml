@@ -22,13 +22,20 @@ spec:
         env:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
-        - name: MONGO_URI
-          value: "mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/?replicaSet=rs0"
-        - name: NATS_URL
-          value: "nats://nats:4222"
+        - name: JokeConfig__MongoUri
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: connectionString
+        - name: JokeConfig__NatsUrl
+          value: "nats://nats.nats-system:4222"
+        - name: JokeConfig__DatabaseName
+          value: "newsdb"
+        - name: JokeConfig__RefreshIntervalMinutes
+          value: "60"
         livenessProbe:
           httpGet:
-            path: /jokes-api/stats
+            path: /health
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 30
@@ -36,7 +43,7 @@ spec:
           httpGet:
             path: /jokes-api/stats
             port: 8080
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
           periodSeconds: 10
         resources:
           requests:
