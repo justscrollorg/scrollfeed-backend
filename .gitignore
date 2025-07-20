@@ -31,6 +31,33 @@ TestResults/
 
 # User secrets
 secrets.json
+appsettings.secrets.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Configuration files with credentials
+values.yaml
+**/values.yaml
+config.yaml
+**/config.yaml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+terraform.tfvars.json
+
+# Kubernetes secrets and sensitive configs
+*secret*.yaml
+*secrets*.yaml
+**/secret*.yaml
+**/secrets*.yaml
 
 # HTTP files for tests (optional)
 *.http
