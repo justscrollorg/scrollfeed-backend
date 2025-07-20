@@ -1,80 +1,199 @@
 ﻿using jokessvc.Models;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using System.Text.Json;
 
-namespace jokessvc.Services
+namespace jokessvc.Services;
+
+public class JokeService
 {
-    public class JokeService
+    private readonly HttpClient _httpClient;
+    private readonly IMongoCollection<Joke> _collection;
+    private readonly ILogger<JokeService> _logger;
+    private readonly JokeConfig _config;
+
+    public JokeService(
+        IHttpClientFactory clientFactory, 
+        ILogger<JokeService> logger,
+        IOptions<JokeConfig> config)
     {
-        private readonly HttpClient _httpClient;
-        private readonly IMongoCollection<Joke> _collection;
+        _logger = logger;
+        _config = config.Value;
+        
+        var client = new MongoClient(_config.MongoUri);
+        var db = client.GetDatabase(_config.DatabaseName);
+        _collection = db.GetCollection<Joke>(_config.CollectionName);
 
-        public JokeService(IConfiguration config, IHttpClientFactory clientFactory)
+        _httpClient = clientFactory.CreateClient();
+        _httpClient.Timeout = TimeSpan.FromSeconds(30);
+    }
+
+    public async Task RefreshJokesAsync(int batchSize = 200)
+    {
+        _logger.LogInformation("Starting jokes refresh with batch size {BatchSize}", batchSize);
+        
+        try
         {
-            var mongoUri = Environment.GetEnvironmentVariable("MONGO_URI")
-                         ?? config.GetValue<string>("MONGO_URI")
-                         ?? "mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/?replicaSet=rs0";
+            // Clear all existing jokes for a complete refresh
+            var deleteResult = await _collection.DeleteManyAsync(FilterDefinition<Joke>.Empty);
+            _logger.LogInformation("Cleared {DeletedCount} existing jokes", deleteResult.DeletedCount);
 
-            var client = new MongoClient(mongoUri);
-            var db = client.GetDatabase("jokedb");
-            _collection = db.GetCollection<Joke>("jokes");
+            var jokes = new List<Joke>();
+            var successCount = 0;
+            var failCount = 0;
 
-            _httpClient = clientFactory.CreateClient();
-        }
-
-        public async Task PreloadJokesAsync(int total = 10000)
-        {
-            Console.WriteLine($"Preloading {total} jokes...");
-
-            await _collection.DeleteManyAsync(_ => true);
-
-            var tasks = new List<Task>();
-
-            for (int i = 0; i < total; i++)
+            for (int i = 0; i < batchSize; i++)
             {
-                tasks.Add(Task.Run(async () =>
+                try
                 {
-                    var joke = await GetOneJokeAsync();
+                    var joke = await FetchJokeWithRetryAsync();
                     if (joke != null)
                     {
-                        await _collection.InsertOneAsync(joke);
+                        jokes.Add(joke);
+                        successCount++;
                     }
-                }));
+                    else
+                    {
+                        failCount++;
+                    }
 
-                if (i % 100 == 0) await Task.Delay(100); // throttle ~100/s
+                    // Rate limiting
+                    if (_config.RateLimitDelayMs > 0)
+                    {
+                        await Task.Delay(_config.RateLimitDelayMs);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to fetch joke {Index}", i + 1);
+                    failCount++;
+                }
             }
 
-            await Task.WhenAll(tasks);
-            Console.WriteLine("Preloading done.");
-        }
+            // Batch insert all jokes
+            if (jokes.Count > 0)
+            {
+                await _collection.InsertManyAsync(jokes);
+                _logger.LogInformation("Successfully inserted {Count} jokes", jokes.Count);
+            }
 
-        private async Task<Joke?> GetOneJokeAsync()
+            _logger.LogInformation("Jokes refresh completed. Success: {Success}, Failed: {Failed}", 
+                successCount, failCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during jokes refresh");
+            throw;
+        }
+    }
+
+    private async Task<Joke?> FetchJokeWithRetryAsync()
+    {
+        for (int attempt = 1; attempt <= _config.MaxRetries; attempt++)
         {
             try
             {
-                var res = await _httpClient.GetAsync("https://official-joke-api.appspot.com/jokes/random");
-                if (!res.IsSuccessStatusCode) return null;
-
-                var json = await res.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<Joke>(json);
+                var response = await _httpClient.GetAsync(_config.JokeApiUrl);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var joke = JsonSerializer.Deserialize<Joke>(json);
+                    
+                    if (joke != null && !string.IsNullOrWhiteSpace(joke.Setup) && !string.IsNullOrWhiteSpace(joke.Punchline))
+                    {
+                        return joke;
+                    }
+                }
+                
+                _logger.LogWarning("Invalid response from joke API on attempt {Attempt}: {StatusCode}", 
+                    attempt, response.StatusCode);
             }
-            catch
+            catch (Exception ex)
             {
-                return null;
+                _logger.LogWarning(ex, "Attempt {Attempt} failed to fetch joke", attempt);
+            }
+
+            if (attempt < _config.MaxRetries)
+            {
+                await Task.Delay(1000 * attempt); // Exponential backoff
             }
         }
 
-        public List<Joke> GetJokes(int page, int pageSize)
-        {
-            return _collection.Find(_ => true)
-                              .Skip((page - 1) * pageSize)
-                              .Limit(pageSize)
-                              .ToList();
-        }
+        return null;
+    }
 
-        public int TotalJokes()
+    public async Task<List<Joke>> GetJokesAsync(int page, int pageSize)
+    {
+        try
         {
-            return (int)_collection.CountDocuments(_ => true);
+            var skip = (page - 1) * pageSize;
+            var jokes = await _collection
+                .Find(FilterDefinition<Joke>.Empty)
+                .Skip(skip)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            return jokes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving jokes for page {Page}, pageSize {PageSize}", page, pageSize);
+            throw;
+        }
+    }
+
+    public async Task<List<Joke>> SearchJokesAsync(string searchTerm, int page, int pageSize)
+    {
+        try
+        {
+            var filter = Builders<Joke>.Filter.Or(
+                Builders<Joke>.Filter.Regex(j => j.Setup, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+                Builders<Joke>.Filter.Regex(j => j.Punchline, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+                Builders<Joke>.Filter.Regex(j => j.Type, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i"))
+            );
+
+            var skip = (page - 1) * pageSize;
+            var jokes = await _collection
+                .Find(filter)
+                .Skip(skip)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            return jokes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching jokes with term '{SearchTerm}'", searchTerm);
+            throw;
+        }
+    }
+
+    public async Task<Joke?> GetJokeByIdAsync(string id)
+    {
+        try
+        {
+            var filter = Builders<Joke>.Filter.Eq(j => j.Id, id);
+            var joke = await _collection.Find(filter).FirstOrDefaultAsync();
+            return joke;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving joke with id {JokeId}", id);
+            throw;
+        }
+    }
+
+    public async Task<long> TotalJokesAsync()
+    {
+        try
+        {
+            return await _collection.CountDocumentsAsync(FilterDefinition<Joke>.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error counting total jokes");
+            throw;
         }
     }
 }
