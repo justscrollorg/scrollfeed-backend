@@ -22,20 +22,16 @@ spec:
         env:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
-        - name: JokeConfig__MongoUri
+        - name: MONGO_URI
           valueFrom:
             secretKeyRef:
               name: mongo-secret
               key: MONGO_URI
-        - name: JokeConfig__NatsUrl
+        - name: NATS_URL
           valueFrom:
             secretKeyRef:
               name: mongo-secret
               key: NATS_URL
-        - name: JokeConfig__DatabaseName
-          value: "jokesdb"
-        - name: JokeConfig__RefreshIntervalMinutes
-          value: "60"
         livenessProbe:
           httpGet:
             path: /health

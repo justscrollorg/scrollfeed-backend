@@ -20,7 +20,9 @@ public class JokeService
         _logger = logger;
         _config = config.Value;
         
-        var client = new MongoClient(_config.MongoUri);
+        // Read MongoDB URI from environment variable first, then fallback to config
+        var mongoUri = Environment.GetEnvironmentVariable("MONGO_URI") ?? _config.MongoUri;
+        var client = new MongoClient(mongoUri);
         var db = client.GetDatabase(_config.DatabaseName);
         _collection = db.GetCollection<Joke>(_config.CollectionName);
 

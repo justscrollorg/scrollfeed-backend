@@ -57,25 +57,28 @@ public class BackgroundRefreshService : BackgroundService
 
     private Task InitializeNatsAsync()
     {
+        // Read NATS URL from environment variable first, then fallback to config
+        var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? _config.NatsUrl;
+        
         var natsUrls = new[]
         {
-            _config.NatsUrl,
+            natsUrl,
             "nats://nats.nats-system.svc.cluster.local:4222", // Full DNS name
             "nats://nats:4222", // Short name fallback
             "nats://localhost:4222" // Local fallback
         };
 
-        foreach (var natsUrl in natsUrls)
+        foreach (var url in natsUrls)
         {
             try
             {
                 var factory = new ConnectionFactory();
-                _natsConnection = factory.CreateConnection(natsUrl);
+                _natsConnection = factory.CreateConnection(url);
                 
                 // Subscribe to refresh requests
                 _natsConnection.SubscribeAsync("jokes.refresh", OnRefreshRequested!);
                 
-                _logger.LogInformation("Connected to NATS at {NatsUrl}", natsUrl);
+                _logger.LogInformation("Connected to NATS at {NatsUrl}", url);
                 return Task.CompletedTask;
             }
             catch (Exception ex)
