@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jokes-service
+  name: jokessvc
   labels:
-    app: jokes-service
+    app: jokessvc
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jokes-service
+      app: jokessvc
   template:
     metadata:
       labels:
-        app: jokes-service
+        app: jokessvc
     spec:
       containers:
-      - name: jokes-service
+      - name: jokessvc
         image: anurag2911/jokes-service:latest
         ports:
         - containerPort: 8080
