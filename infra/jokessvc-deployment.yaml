@@ -22,6 +22,8 @@ spec:
         env:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
         - name: MONGO_URI
           valueFrom:
             secretKeyRef:
@@ -32,6 +34,12 @@ spec:
             secretKeyRef:
               name: mongo-secret
               key: NATS_URL
+        - name: RefreshIntervalMinutes
+          value: "60"
+        - name: BatchSize
+          value: "200"
+        - name: RateLimitDelayMs
+          value: "100"
         livenessProbe:
           httpGet:
             path: /health
@@ -40,7 +48,7 @@ spec:
           periodSeconds: 30
         readinessProbe:
           httpGet:
-            path: /jokes-api/stats
+            path: /ready
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 10
