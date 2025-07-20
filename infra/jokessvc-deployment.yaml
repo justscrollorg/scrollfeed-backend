@@ -63,12 +63,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: jokes-service
+  name: jokessvc
   labels:
-    app: jokes-service
+    app: jokessvc
 spec:
   selector:
-    app: jokes-service
+    app: jokessvc
   ports:
   - port: 80
     targetPort: 8080
