@@ -2,7 +2,6 @@
 using jokessvc.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using NATS.Client;
 using System.Text.Json;
 
 namespace jokessvc.Controllers;
@@ -110,43 +109,15 @@ public class JokesController : ControllerBase
                 return BadRequest("Batch size must be between 1 and 1000");
             }
 
-            // Try to use NATS for refresh, fall back to direct call
-            try
-            {
-                var factory = new ConnectionFactory();
-                using var connection = factory.CreateConnection(_config.NatsUrl);
-                
-                var refreshRequest = new RefreshRequest
-                {
-                    BatchSize = batchSize,
-                    RequestId = Guid.NewGuid().ToString(),
-                    Priority = "manual"
-                };
-
-                var message = JsonSerializer.Serialize(refreshRequest);
-                connection.Publish("jokes.refresh", System.Text.Encoding.UTF8.GetBytes(message));
-                
-                _logger.LogInformation("Triggered refresh via NATS: {RequestId}", refreshRequest.RequestId);
-                
-                return Accepted(new { 
-                    message = "Refresh triggered", 
-                    requestId = refreshRequest.RequestId,
-                    batchSize 
-                });
-            }
-            catch (Exception natsEx)
-            {
-                _logger.LogWarning(natsEx, "NATS not available, performing direct refresh");
-                
-                // Direct refresh as fallback
-                await _jokeService.RefreshJokesAsync(batchSize);
-                var total = await _jokeService.TotalJokesAsync();
-                
-                return Ok(new { 
-                    message = "Refresh completed directly", 
-                    totalJokes = total 
-                });
-            }
+            // Perform direct refresh
+            await _jokeService.RefreshJokesAsync(batchSize);
+            var total = await _jokeService.TotalJokesAsync();
+            
+            return Ok(new { 
+                message = "Refresh completed", 
+                totalJokes = total,
+                batchSize = batchSize
+            });
         }
         catch (Exception ex)
         {
