@@ -1,16 +1,16 @@
 # Articles Service v2.0
 
-An enhanced microservice for fetching and serving Wikipedia articles with NATS messaging and MongoDB persistence.
+An enhanced microservice for fetching and serving Wikipedia articles with MongoDB persistence and reliable timer-based refresh.
 
 ## Features
 
-- **NATS Integration**: Uses NATS for distributed messaging and background job processing
 - **MongoDB Storage**: Persistent storage with proper indexing and cleanup
 - **Rate Limiting**: Respects Wikipedia's API rate limits (100 requests/sec)
-- **Background Refresh**: Automatic periodic refresh of articles every 6 hours
+- **Background Refresh**: Automatic periodic refresh of articles every configurable interval
 - **Search Capability**: Full-text search across article titles and descriptions
 - **Health Monitoring**: Built-in health checks and statistics endpoints
 - **Kubernetes Ready**: Production-ready deployment configuration
+- **Reliable Refresh**: Timer-based refresh that works independently without external dependencies
 
 ## Architecture
 
@@ -21,12 +21,8 @@ An enhanced microservice for fetching and serving Wikipedia articles with NATS m
                                 │
                                 ▼
                        ┌─────────────────┐
-                       │   NATS Server   │
-                       └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │ Background Jobs │
+                       │ Background Timer│
+                       │  Refresh Jobs   │
                        └─────────────────┘
 ```
 

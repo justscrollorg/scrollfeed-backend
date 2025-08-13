@@ -1,8 +1,6 @@
 using articlessvc.Models;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using NATS.Client;
-using System.Text.Json;
 
 namespace articlessvc.Services;
 
