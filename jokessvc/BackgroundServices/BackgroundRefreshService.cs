@@ -1,7 +1,6 @@
 using jokessvc.Models;
 using jokessvc.Services;
 using Microsoft.Extensions.Options;
-// using NATS.Client;
 using System.Text.Json;
 
 namespace jokessvc.BackgroundServices;
@@ -12,7 +11,6 @@ public class BackgroundRefreshService : BackgroundService
     private readonly ILogger<BackgroundRefreshService> _logger;
     private readonly JokeConfig _config;
     private readonly IServiceProvider _serviceProvider;
-    // NATS removed
     private Timer? _refreshTimer;
 
     public BackgroundRefreshService(

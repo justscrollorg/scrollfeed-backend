@@ -29,11 +29,6 @@ spec:
             secretKeyRef:
               name: mongo-secret
               key: MONGO_URI
-        - name: NATS_URL
-          valueFrom:
-            secretKeyRef:
-              name: mongo-secret
-              key: NATS_URL
         - name: RefreshIntervalMinutes
           value: "60"
         - name: BatchSize
@@ -42,13 +37,13 @@ spec:
           value: "100"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /jokes-api/stats
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 30
         readinessProbe:
           httpGet:
-            path: /ready
+            path: /jokes-api/stats
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 10
