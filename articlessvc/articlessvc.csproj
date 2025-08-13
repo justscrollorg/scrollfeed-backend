@@ -9,7 +9,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.8" />
     <PackageReference Include="MongoDB.Driver" Version="3.4.0" />
-    <PackageReference Include="NATS.Client" Version="1.1.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
   </ItemGroup>
 

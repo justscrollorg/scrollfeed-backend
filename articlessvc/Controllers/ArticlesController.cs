@@ -2,8 +2,6 @@
 using articlessvc.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using NATS.Client;
-using System.Text.Json;
 
 namespace articlessvc.Controllers;
 
@@ -110,43 +108,17 @@ public class ArticlesController : ControllerBase
                 return BadRequest("Batch size must be between 1 and 1000");
             }
 
-            // Try to use NATS for refresh, fall back to direct call
-            try
-            {
-                var factory = new ConnectionFactory();
-                using var connection = factory.CreateConnection(_config.NatsUrl);
-                
-                var refreshRequest = new RefreshRequest
-                {
-                    BatchSize = batchSize,
-                    RequestId = Guid.NewGuid().ToString(),
-                    Priority = "manual"
-                };
-
-                var message = JsonSerializer.Serialize(refreshRequest);
-                connection.Publish("articles.refresh", System.Text.Encoding.UTF8.GetBytes(message));
-                
-                _logger.LogInformation("Triggered refresh via NATS: {RequestId}", refreshRequest.RequestId);
-                
-                return Accepted(new { 
-                    message = "Refresh triggered", 
-                    requestId = refreshRequest.RequestId,
-                    batchSize 
-                });
-            }
-            catch (Exception natsEx)
-            {
-                _logger.LogWarning(natsEx, "NATS not available, performing direct refresh");
-                
-                // Direct refresh as fallback
-                await _wikiService.RefreshArticlesAsync(batchSize);
-                var total = await _wikiService.TotalArticlesAsync();
-                
-                return Ok(new { 
-                    message = "Refresh completed directly", 
-                    totalArticles = total 
-                });
-            }
+            // Direct refresh without NATS dependency
+            _logger.LogInformation("Performing direct refresh with batch size: {BatchSize}", batchSize);
+            
+            await _wikiService.RefreshArticlesAsync(batchSize);
+            var total = await _wikiService.TotalArticlesAsync();
+            
+            return Ok(new { 
+                message = "Refresh completed", 
+                totalArticles = total,
+                batchSize 
+            });
         }
         catch (Exception ex)
         {

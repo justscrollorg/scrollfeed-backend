@@ -2,7 +2,6 @@ namespace articlessvc.Models;
 
 public class WikiConfig
 {
-    public string NatsUrl { get; set; } = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
     public string MongoUri { get; set; } = Environment.GetEnvironmentVariable("MONGO_URI") ?? "mongodb://localhost:27017";
     public int RefreshIntervalMinutes { get; set; } = 1; // Temporarily set to 1 minute for testing
     public int BatchSize { get; set; } = 200;
