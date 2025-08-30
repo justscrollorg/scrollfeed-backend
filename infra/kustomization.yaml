@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- articlessvc-deployment.yaml
+- jokessvc-deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/name: scrollfeed-backend
+  app.kubernetes.io/component: backend-services
+  environment: prod
