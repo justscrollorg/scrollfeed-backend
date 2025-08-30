@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: jokessvc
-        image: anurag2911/jokes-service:latest
+        image: justscroll/jokes-service:latest
         ports:
         - containerPort: 8080
         env:
