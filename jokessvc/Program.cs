@@ -46,4 +46,7 @@ app.MapControllers();
 // Health endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
+// Ready endpoint for Kubernetes readiness probe
+app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTime.UtcNow }));
+
 app.Run();

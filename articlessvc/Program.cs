@@ -42,6 +42,10 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 app.MapControllers();
 
+// Health endpoints
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTime.UtcNow }));
+
 // Initial preload (optional - the background service will handle regular refreshes)
 using (var scope = app.Services.CreateScope())
 {
