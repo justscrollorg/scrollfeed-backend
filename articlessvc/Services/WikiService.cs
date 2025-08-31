@@ -1,4 +1,5 @@
 ﻿using articlessvc.Models;
+using articlessvc.Metrics;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using System.Text.Json;
@@ -152,18 +153,40 @@ public class WikiService
     public async Task PreloadArticlesAsync(int total = 200)
     {
         _logger.LogInformation("Preloading {Total} articles...", total);
-        await RefreshArticlesAsync(total);
-        _logger.LogInformation("Preloading completed");
+        
+        var startTime = DateTime.UtcNow;
+        try
+        {
+            await RefreshArticlesAsync(total);
+            ArticlesMetrics.BackgroundRefreshRuns.WithLabels("success").Inc();
+            _logger.LogInformation("Preloading completed");
+        }
+        catch (Exception ex)
+        {
+            ArticlesMetrics.BackgroundRefreshRuns.WithLabels("failure").Inc();
+            _logger.LogError(ex, "Error during preloading");
+            throw;
+        }
+        finally
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+            ArticlesMetrics.BackgroundRefreshDuration.Observe(duration);
+        }
     }
 
     public async Task<List<WikiArticle>> GetArticlesAsync(int page, int pageSize)
     {
         var skip = (page - 1) * pageSize;
-        return await _collection.Find(FilterDefinition<WikiArticle>.Empty)
+        var articles = await _collection.Find(FilterDefinition<WikiArticle>.Empty)
                                 .Sort(Builders<WikiArticle>.Sort.Descending("_createdAt"))
                                 .Skip(skip)
                                 .Limit(pageSize)
                                 .ToListAsync();
+        
+        // Record metrics for served articles
+        ArticlesMetrics.ArticlesServed.WithLabels("general", "wikipedia").Inc(articles.Count);
+        
+        return articles;
     }
 
     public List<WikiArticle> GetArticles(int page, int pageSize)

@@ -1,5 +1,7 @@
 ﻿using articlessvc.Models;
 using articlessvc.Services;
+using articlessvc.Metrics;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Initialize metrics
+ArticlesMetrics.Initialize("articles-service", "1.0.0", app.Environment.EnvironmentName);
+
+// Add Prometheus metrics middleware
+app.UseMetricServer(); // This exposes /metrics endpoint
+app.UseHttpMetrics(); // This captures HTTP metrics automatically
 
 // Middleware
 app.UseCors("AllowAll");
